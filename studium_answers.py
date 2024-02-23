@@ -6,24 +6,20 @@ ENCODING = 'utf-8'
 
 class StudiumAnswers:
     """
-    One answer to treat, one instance.
+    One question, one instance.
     """
-    def __init__(self, studium_file: str, previous_answers: str, answer_num: float):
+    def __init__(self, studium_file, references_file, answer_num: float):
         """
         self.data contains just 2 columns: 'Adresse de courriel' and 'Réponse num'.
         Parameters
             studium_file: Studium file path.
+            previous_answers: references (an answers-notes pool) path.
             response_num: Question number whose answers to be corrected.
         """
         self.answer_column = f'Réponse {answer_num}'
         self.email_answer = pd.read_csv(studium_file)[['Adresse de courriel', self.answer_column]]
-        self.cleaned_email_answers_note = pd.DataFrame()  # cleaned answers without note
-        if previous_answers.endswith('csv'):
-            self.pre_answers = pd.read_csv(previous_answers)
-        elif previous_answers.endswith('xlsx'):
-            self.pre_answers = pd.read_excel(previous_answers)
-        else:
-            raise Exception(f'{previous_answers} not .csv or .xlsx file')
+        self.cleaned_email_answers_note = pd.DataFrame()  # email and cleaned answers without note
+        self.references_file = pd.read_csv(references_file)
 
     @staticmethod
     def clean_string(string: str):
@@ -71,7 +67,7 @@ class StudiumAnswers:
         """
         self.cleaned_email_answers_note = self.clean_answers()
         current_answers = self.cleaned_email_answers_note[[self.answer_column, 'Note']]
-        df_all = pd.concat([self.pre_answers, current_answers], ignore_index=True)
+        df_all = pd.concat([self.references_file, current_answers], ignore_index=True)
         df_all = df_all.drop_duplicates(self.answer_column).sort_values(by=self.answer_column)
         df_all.to_csv(out_file, encoding=ENCODING, index=False)
 
