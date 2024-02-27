@@ -18,8 +18,9 @@ class StudiumAnswers:
         """
         self.answer_column = f'Réponse {answer_num}'
         self.email_answer = pd.read_csv(studium_file)[['Adresse de courriel', self.answer_column]]
-        self.cleaned_email_answers_note = pd.DataFrame()  # email and cleaned answers without note
-        self.references_file = pd.read_csv(references_file)
+        self.email_answer.rename(columns={self.answer_column: 'Réponse'}, inplace=True)
+        self.cleaned_email_answers_note = pd.DataFrame()  # email, cleaned answers and empty note
+        self.references_file = pd.read_csv(references_file, sep='\t')
 
     @staticmethod
     def clean_string(string: str):
@@ -33,6 +34,7 @@ class StudiumAnswers:
         punct = ['.', '!', '?', ';']
         string = string.strip().lower()
         string = ''.join(ch for ch in string if ch not in punct)
+        string = re.sub(r"['’ʼ‛]", "'", string)  # formalize apostrophes
         string = re.sub(r'\s+', ' ', string)
         html = re.compile('<p>|</p>')
         string = re.sub(html, '', string)
@@ -49,47 +51,44 @@ class StudiumAnswers:
         df = df.fillna('vide')
 
         # clean answers
-        df[self.answer_column] = df[self.answer_column].apply(self.clean_string)
+        df['Réponse'] = df['Réponse'].apply(self.clean_string)
 
         # set new empty column 'Note'
-        df['Note'] = 'DONNEZ UNE VALEUR'
+        df['Note'] = ''
         return df
 
-    def concat_previous_answers(self, out_file):
+    def concat_previous_answers(self, current_answers, out_file: str):
         """
-        Make references file with previous answers and current answers.
+        Update references file with previous answers and current answers.
         Merges in df previous years' unique answers and their grade to not yet graded current year's unique answers.
         Current year's answers identical to previous years' answers are dropped.
         Parameters
             out_file (string): output file name
         Returns
-            None, saves csv file merging both new and previous answers to the same question
+            None, saves tsv file merging both new and previous answers to the same question
         """
-        self.cleaned_email_answers_note = self.clean_answers()
-        current_answers = self.cleaned_email_answers_note[[self.answer_column, 'Note']]
         df_all = pd.concat([self.references_file, current_answers], ignore_index=True)
-        df_all = df_all.drop_duplicates(self.answer_column).sort_values(by=self.answer_column)
-        df_all.to_csv(out_file, encoding=ENCODING, index=False)
+        df_all = df_all.drop_duplicates('Réponse').sort_values('Réponse')
+        df_all.to_csv(out_file, sep='\t', encoding=ENCODING, index=False)
 
-    def compile_grades(self, references_file: str, out_file: str):
+    def compile_grades(self, email_cleaned_answers_note, out_file: str):
         """
         Maps unique answers and corresponding grade to student's email in a df and saves it to file.
         Parameters
-            references_file (string): name of manually graded file containing unique answers and corresponding grade +
-            previous years' answers and their grade.
+            email_cleaned_answers_note: A DataFrame instance that contains email, cleaned answers and empty note columns
             out_file (string): output file name
         Returns
             None, saves df to file
         """
-        references_df = pd.read_csv(references_file).sort_values(by=self.answer_column)
+        references_df = self.references_file.sort_values(by='Réponse')
         notes = dict()
-        for index, row in self.cleaned_email_answers_note.sort_values(by=self.answer_column).iterrows():
+        for index, row in email_cleaned_answers_note.sort_values(by='Réponse').iterrows():
             for i_g, r_g in references_df.iterrows():
-                if row[self.answer_column] == r_g.loc[self.answer_column]:
+                if row['Réponse'] == r_g.loc['Réponse']:
                     notes[row.loc['Adresse de courriel']] = r_g.loc['Note']
                     break
             else:
-                raise Exception(f"<{row[self.answer_column]}> : Not found its note in referneces")
+                raise Exception(f"<{row['Réponse']}> : Not found its note in referneces")
         out_df = pd.DataFrame(notes, index=['Note']).transpose()
         out_df.to_csv(out_file, index_label='Adresse de courriel', encoding=ENCODING)
         print(f"<{out_file}> written successfully.")

@@ -2,7 +2,13 @@
 
 from studium_answers import StudiumAnswers
 
-# load excel or csv: email answers
-sa = StudiumAnswers('reponses.csv', 'q14-references.csv', 14)
-sa.concat_previous_answers('Q14-concatenated_ref_to_correct.csv')
-sa.compile_grades('Q14-concatenated_ref_to_correct.csv', 'Q14-notes.csv')
+# first load for merge
+sa = StudiumAnswers('reponses.csv', 'q14-references.tsv', 14)
+email_cleaned_answers_note = sa.clean_answers()
+sa.concat_previous_answers(email_cleaned_answers_note[['Réponse', 'Note']],
+                           'Q14-concatenated_ref_to_correct.tsv')
+
+# reload after the references file is updated
+sa = StudiumAnswers('reponses.csv', 'Q14-concatenated_ref_to_correct.tsv', 14)
+email_cleaned_answers_note = sa.clean_answers()
+sa.compile_grades(email_cleaned_answers_note, 'Q14-notes.csv')
