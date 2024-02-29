@@ -1,7 +1,9 @@
+import pandas as pd
 from pywebio.input import *
 from pywebio.output import *
 from studium_answers import StudiumAnswers
 from io import StringIO
+import re
 
 text = ("If the references file has been updated by the auxiliary, please select 'Yes.' Otherwise, select 'No.' "
         "In this case, we will only output a concatenated references file that the auxiliary needs to mark.")
@@ -14,14 +16,20 @@ def must_number(s: str):
             return f"{num} is not a number"
 
 
+def get_question_num(file):
+    df = pd.read_csv(file)
+    return [col for col in df.columns if col.startswith('Réponse')]
+
+
 def main():
     # Prompt user to upload a file
-    studium_file = file_upload("Upload Studium answers table:", accept='.csv')
-    input_column_num = input('Question number(s)', type=TEXT, validate=must_number,
-                             help_text='Separate numbers with space. If you want to process Q1 and Q20, tape: 1 20')
 
+    studium_file = file_upload("Upload Studium answers table:", accept='.csv')
+    input_column_num = checkbox('Please select the question number(s) that you want to process.',
+                                options=get_question_num(StringIO(studium_file['content'].decode('utf-8'))))
     # Process questions, each question is an instance of StudiumAnswers
-    for num in input_column_num.split():
+    for response in input_column_num:
+        num = re.search(r'\d+', response).group(0)
         put_markdown(f"For Question {num}")
         references_file = file_upload("Upload references:", accept='.tsv')
         radio_compile_grade = radio('Continue and compile grade?', options=['Yes', 'No'], help_text=text)

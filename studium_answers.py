@@ -8,7 +8,7 @@ class StudiumAnswers:
     """
     One question, one instance.
     """
-    def __init__(self, studium_file, references_file, answer_num: float):
+    def __init__(self, studium_file, references_file, answer_num: str):
         """
         self.data contains just 2 columns: 'Adresse de courriel' and 'Réponse num'.
         Parameters
@@ -68,7 +68,7 @@ class StudiumAnswers:
             None, saves tsv file merging both new and previous answers to the same question
         """
         df_all = pd.concat([self.references_file, current_answers], ignore_index=True)
-        df_all = df_all.drop_duplicates('Réponse').sort_values('Réponse')
+        df_all = df_all.drop_duplicates('Réponse').sort_values(by=['Note', 'Réponse'])
         df_all.to_csv(out_file, sep='\t', encoding=ENCODING, index=False)
 
     def compile_grades(self, email_cleaned_answers_note, out_file: str):
