@@ -88,7 +88,7 @@ class StudiumAnswers:
                     notes[row.loc['Adresse de courriel']] = r_g.loc['Note']
                     break
             else:
-                raise Exception(f"<{row['Réponse']}> : Not found its note in referneces")
+                raise Exception(f"Error: <{row['Réponse']}> : Not found its note in references.")
         out_df = pd.DataFrame(notes, index=['Note']).transpose()
         out_df.to_csv(out_file, index_label='Adresse de courriel', encoding=ENCODING)
         print(f"<{out_file}> written successfully.")
